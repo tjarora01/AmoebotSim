@@ -3,16 +3,19 @@
  * notice can be found at the top of main/main.cpp. */
 
 #include "alg/demo/discodemo.h"
+#include "iostream"
+using namespace std;
 
 DiscoDemoParticle::DiscoDemoParticle(const Node& head, const int globalTailDir,
                                      const int orientation,
-                                     AmoebotSystem& system,
+                                     AmoebotSystem *system,
                                      const int counterMax)
-    : AmoebotParticle(head, globalTailDir, orientation, system),
+    : AmoebotParticle(head, globalTailDir, orientation, (AmoebotSystem *) system),
       _counter(counterMax),
       _counterMax(counterMax) {
   _state = getRandColor();
 }
+
 
 void DiscoDemoParticle::activate() {
   // First decrement the particle's counter. If it's zero, reset the counter and
@@ -27,6 +30,8 @@ void DiscoDemoParticle::activate() {
   // direction to try to expand towards, but only do so if the node in that
   // direction is unoccupied. Otherwise, if the particle is expanded, simply
   // contract its tail.
+
+
   if (isContracted()) {
     int expandDir = randDir();
     if (canExpand(expandDir)) {
@@ -35,8 +40,44 @@ void DiscoDemoParticle::activate() {
   } else {  // isExpanded().
     contractTail();
   }
+
+
+    if (system->getCount("# Activations")._value % 50 == 0) {
+        DiscoDemoSystem::tryItOut();
+    }
+
+
 }
 
+/*
+void DiscoDemoParticle::activate() {
+    // First decrement the particle's counter. If it's zero, reset the counter and
+    // get a new color.
+    _counter--;
+    if (_counter == 0) {
+        _counter = _counterMax;
+        _state = getRandColor();
+    }
+
+    // Next, handle movement. If the particle is contracted, choose a random
+    // direction to try to expand towards, but only do so if the node in that
+    // direction is unoccupied. Otherwise, if the particle is expanded, simply
+    // contract its tail.
+
+
+    if (isContracted()) {
+        int expandDir = randDir();
+        if (canExpand(expandDir)) {
+            expand(expandDir);
+        }
+    }
+    else {  // isExpanded().
+        contractTail();
+    }
+}
+*/
+
+// change particle color by changing hexadecimal codes below
 int DiscoDemoParticle::headMarkColor() const {
   switch(_state) {
     case State::Red:    return 0xff0000;
@@ -86,6 +127,8 @@ DiscoDemoParticle::State DiscoDemoParticle::getRandColor() const {
   return static_cast<State>(randInt(0, 7));
 }
 
+
+// BOUNDARY STUFF
 DiscoDemoSystem::DiscoDemoSystem(unsigned int numParticles, int counterMax) {
   // In order to enclose an area that's roughly 3.7x the # of particles using a
   // regular hexagon, the hexagon should have side length 1.4*sqrt(# particles).
@@ -112,8 +155,64 @@ DiscoDemoSystem::DiscoDemoSystem(unsigned int numParticles, int counterMax) {
     // If the node satisfies (iii) and is unoccupied, place a particle there.
     if (0 < x + y && x + y < 2 * sideLen
         && occupied.find(node) == occupied.end()) {
-      insert(new DiscoDemoParticle(node, -1, randDir(), *this, counterMax));
+      insert(new DiscoDemoParticle(node, -1, randDir(), this, counterMax));
       occupied.insert(node);
     }
   }
 }
+
+void DiscoDemoSystem:: tryItOut() {
+    AmoebotParticle* p;
+    vector<AmoebotParticle*> particles = p->system->particles;
+    map<Node, AmoebotParticle*> particleMap = p->system->particleMap;
+    // set<AmoebotParticle*> activatedParticles = p->system->activatedParticles;
+
+    // erase particle from particles vector
+    AmoebotParticle* random = particles.back(); // element at back of list
+    particles.pop_back(); // removes element from back of list
+
+
+    // erase particle from map
+    for (auto const& x : particleMap) {
+        if (particleMap.at(x.first) == random) {
+            particleMap.erase(x.first);
+        }
+    }
+
+    /*
+    // erase particle from activated particles set
+    activatedParticles.erase(random);
+     */
+}
+
+void DiscoDemoParticle:: deleteIt() {
+    AmoebotParticle* p;
+    vector<AmoebotParticle*> particles = p->system->particles;
+    map<Node, AmoebotParticle*> particleMap = p->system->particleMap;
+    set<AmoebotParticle*> activatedParticles = p->system->activatedParticles;
+
+    Node h = head;
+    AmoebotParticle* random;
+
+    if (isExpanded()) {
+        // remove from map
+        for (const auto&[key, value] : particleMap) {
+            if (key == h) {
+                random = particleMap.at(key);
+                particleMap.erase(key);
+            }
+        }
+
+        // remove from vector
+        for (int i = 0; i < particles.size(); i++) {
+            if (particles.at(i) == random) {
+                particles.erase(particles.begin() + i);
+            }
+        }
+
+        // remove from set
+        activatedParticles.erase(random);
+    }
+}
+
+
